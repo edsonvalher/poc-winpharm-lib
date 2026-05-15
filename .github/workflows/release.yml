@@ -74,6 +74,7 @@ jobs:
             dll/WorkflowLib.dll \
             dll/POSCobolLib.dll \
             dll/ExpressPharmLib.dll \
-            dll/ExpressPharmModel.dll
+            dll/ExpressPharmModel.dll \
+            dll/DevExpress.XtraScheduler.v24.2.dll
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
