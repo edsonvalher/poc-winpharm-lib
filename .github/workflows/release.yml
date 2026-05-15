@@ -1,0 +1,79 @@
+name: Release
+
+on:
+  push:
+    branches: [master]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine version
+        id: version
+        shell: bash
+        run: |
+          lastTag=$(git describe --tags --abbrev=0 2>/dev/null) || lastTag=""
+
+          if [ -z "$lastTag" ]; then
+            newVersion="1.0.0"
+          else
+            version="${lastTag#v}"
+            IFS='.' read -r major minor patch <<< "$version"
+            bump="patch"
+            while IFS= read -r commit; do
+              if [[ "$commit" == *"BREAKING CHANGE"* ]]; then bump="major"; break; fi
+              if [[ "$commit" == feat:* ]] && [ "$bump" != "major" ]; then bump="minor"; fi
+            done < <(git log "$lastTag..HEAD" --pretty=format:'%s' 2>/dev/null)
+            case "$bump" in
+              major) major=$((major+1)); minor=0; patch=0 ;;
+              minor) minor=$((minor+1)); patch=0 ;;
+              *)     patch=$((patch+1)) ;;
+            esac
+            newVersion="$major.$minor.$patch"
+          fi
+
+          echo "NEW_VERSION=$newVersion" >> $GITHUB_OUTPUT
+          echo "LAST_TAG=$lastTag" >> $GITHUB_OUTPUT
+          echo "Version: $newVersion (previous: $lastTag)"
+
+      - name: Create tag and publish release
+        run: |
+          version="${{ steps.version.outputs.NEW_VERSION }}"
+          lastTag="${{ steps.version.outputs.LAST_TAG }}"
+
+          git config user.name  'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git remote set-url origin "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
+          git tag "v$version"
+          git push origin "v$version"
+
+          if [ -n "$lastTag" ]; then
+            notes=$(git log "$lastTag..HEAD" --pretty=format:'- %s' 2>/dev/null)
+          else
+            notes="Initial release"
+          fi
+
+          gh release create "v$version" \
+            --title "lib v$version" \
+            --notes "$notes" \
+            ocx/dsiEMVX.ocx \
+            ocx/dsiPDCX.ocx \
+            ocx/DSICLientX.ocx \
+            dll/CommonLib.dll \
+            dll/DBAccess.dll \
+            dll/POSDatabase.dll \
+            dll/WorkflowLib.dll \
+            dll/POSCobolLib.dll \
+            dll/ExpressPharmLib.dll \
+            dll/ExpressPharmModel.dll
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
