@@ -75,6 +75,15 @@ jobs:
             dll/POSCobolLib.dll \
             dll/ExpressPharmLib.dll \
             dll/ExpressPharmModel.dll \
-            dll/DevExpress.XtraScheduler.v24.2.dll
+            dll/DevExpress.Data.Desktop.v24.2.dll \
+            dll/DevExpress.Data.v24.2.dll \
+            dll/DevExpress.Drawing.v24.2.dll \
+            dll/DevExpress.Printing.v24.2.Core.dll \
+            dll/DevExpress.Utils.v24.2.dll \
+            dll/DevExpress.XtraEditors.v24.2.dll \
+            dll/DevExpress.XtraGrid.v24.2.dll \
+            dll/DevExpress.XtraScheduler.v24.2.dll \
+            dll/DevExpress.XtraScheduler.v24.2.Core.dll \
+            dll/DevExpress.XtraScheduler.v24.2.Core.Desktop.dll
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
