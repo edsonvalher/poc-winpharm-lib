@@ -1,0 +1,9 @@
+@echo off
+setlocal
+
+set DEFAULT_DIR=C:\Winpharm
+set /p INSTALL_DIR="Installation directory [%DEFAULT_DIR%]: "
+if "%INSTALL_DIR%"=="" set INSTALL_DIR=%DEFAULT_DIR%
+
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0update.ps1" -InstallDir "%INSTALL_DIR%"
+pause
