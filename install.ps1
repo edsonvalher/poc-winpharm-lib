@@ -3,15 +3,6 @@ param(
     [string]$Token      = $env:GH_TOKEN
 )
 
-# Re-launch as administrator if needed (OCX registration requires elevation)
-$isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]'Administrator')
-if (-not $isAdmin) {
-    $psArgs = "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`" -InstallDir `"$InstallDir`""
-    if ($Token) { $psArgs += " -Token `"$Token`"" }
-    Start-Process powershell -ArgumentList $psArgs -Verb RunAs -Wait
-    exit
-}
-
 $scriptDir  = Split-Path -Parent $MyInvocation.MyCommand.Path
 $ocxDir     = Join-Path $scriptDir 'ocx'
 $dllDir     = Join-Path $scriptDir 'dll'
