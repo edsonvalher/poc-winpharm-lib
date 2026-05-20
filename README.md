@@ -69,11 +69,3 @@ Each GitHub Release contains all OCX and DLL files as downloadable assets. The `
 ## Initial version
 
 `v1.0.0`
-
-## Version history
-
-| Version | Date | Type | Description |
-|---|---|---|---|
-| 1.0.0 | 2026-05-15 | initial | Initial setup — Datacap OCX files and install/update scripts |
-| 1.0.1 | 2026-05-15 | feat | Added prebuilt POS and workflow DLLs |
-| 1.0.2 | 2026-05-15 | feat | Added all DevExpress v24.2 DLLs as release assets |
