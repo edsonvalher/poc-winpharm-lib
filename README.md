@@ -50,6 +50,18 @@ Storing these in a dedicated repository allows the `winpharm-net` CI pipeline to
 | DevExpress.XtraScheduler.v24.2.Core.dll | DevExpress scheduler core |
 | DevExpress.XtraScheduler.v24.2.Core.Desktop.dll | DevExpress scheduler desktop layer |
 
+## Versioning
+
+Every push to `master` triggers the pipeline. The version number is calculated automatically from commit messages using semantic versioning:
+
+| Prefix | Effect |
+|---|---|
+| `bug:` | Patch increment (1.0.0 → 1.0.1) |
+| `feat:` | Minor increment (1.0.0 → 1.1.0) |
+| `BREAKING CHANGE` in body | Major increment (1.0.0 → 2.0.0) |
+
+Unlike `winpharm-net` and `winpharm-cobol`, this repository does not detect changes per file — every release publishes all binaries regardless of what changed. This is intentional since the files here are stable dependencies that rarely change.
+
 ## Output
 
 Each GitHub Release contains all OCX and DLL files as downloadable assets. The `winpharm-net` pipeline downloads them automatically using the GitHub CLI at build time.
