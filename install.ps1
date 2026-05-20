@@ -1,9 +1,20 @@
 param(
-    [string]$InstallDir = 'C:\Winpharm'
+    [string]$InstallDir = 'C:\Winpharm',
+    [string]$Token      = $env:GH_TOKEN
 )
+
+# Re-launch as administrator if needed (OCX registration requires elevation)
+$isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]'Administrator')
+if (-not $isAdmin) {
+    $psArgs = "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`" -InstallDir `"$InstallDir`""
+    if ($Token) { $psArgs += " -Token `"$Token`"" }
+    Start-Process powershell -ArgumentList $psArgs -Verb RunAs -Wait
+    exit
+}
 
 $scriptDir  = Split-Path -Parent $MyInvocation.MyCommand.Path
 $ocxDir     = Join-Path $scriptDir 'ocx'
+$dllDir     = Join-Path $scriptDir 'dll'
 $markerFile = Join-Path $InstallDir '.winpharm_installed'
 
 function Test-OcxRegistered {
@@ -31,8 +42,17 @@ function Register-Ocx {
                 Write-Warning "  Failed to register $file (exit code $($result.ExitCode)). Run as administrator."
             }
         } else {
-            Write-Warning "  $file not found in ocx/. Add it to the repo first."
+            Write-Warning "  $file not found in ocx/."
         }
+    }
+}
+
+function Copy-LibDlls {
+    Write-Host "Copying library files..."
+    if (-not (Test-Path $dllDir)) { Write-Warning "  dll/ folder not found - skipping."; return }
+    Get-ChildItem $dllDir -Filter '*.dll' | ForEach-Object {
+        Copy-Item $_.FullName (Join-Path $InstallDir $_.Name) -Force
+        Write-Host "  $($_.Name)"
     }
 }
 
@@ -40,13 +60,15 @@ New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
 
 if ((Test-OcxRegistered) -and (Test-Path $markerFile)) {
     Write-Host "Winpharm already installed. Running update..."
-    & "$scriptDir\update.ps1" -InstallDir $InstallDir
+    & "$scriptDir\update.ps1" -InstallDir $InstallDir -Token $Token
 } else {
     Write-Host "New installation detected."
     Register-Ocx
     Write-Host ""
+    Copy-LibDlls
+    Write-Host ""
     Write-Host "Downloading all components..."
-    & "$scriptDir\update.ps1" -InstallDir $InstallDir
+    & "$scriptDir\update.ps1" -InstallDir $InstallDir -Token $Token
     Set-Content $markerFile (Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
     Write-Host ""
     Write-Host "Installation complete."

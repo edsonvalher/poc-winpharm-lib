@@ -1,24 +1,51 @@
 param(
-    [string]$InstallDir = 'C:\Winpharm'
+    [string]$InstallDir = 'C:\Winpharm',
+    [string]$Token      = $env:GH_TOKEN
 )
 
-$netRepo    = 'edsonvalher/poc-winpharm-net'
-$cobolRepo  = 'edsonvalher/poc-winpharm-cobol'
-$installDir = $InstallDir
-$tempDir    = Join-Path $env:TEMP 'winpharm_update'
+$netRepo   = 'edsonvalher/poc-winpharm-net'
+$cobolRepo = 'edsonvalher/poc-winpharm-cobol'
+$tempDir   = Join-Path $env:TEMP 'winpharm_update'
 
 New-Item -ItemType Directory -Force -Path $tempDir | Out-Null
 
-$baseNet   = "https://github.com/$netRepo/releases/latest/download"
-$baseCobol = "https://github.com/$cobolRepo/releases/latest/download"
+function Get-ReleaseAsset {
+    param($Repo, $AssetName, $OutFile, $Version)
+    $apiHeaders = @{ Accept = 'application/vnd.github.v3+json' }
+    if ($Token) { $apiHeaders['Authorization'] = "token $Token" }
+
+    $releaseUrl = if ($Version) {
+        "https://api.github.com/repos/$Repo/releases/tags/v$Version"
+    } else {
+        "https://api.github.com/repos/$Repo/releases/latest"
+    }
+
+    $release = Invoke-RestMethod $releaseUrl -Headers $apiHeaders
+    $asset   = $release.assets | Where-Object { $_.name -eq $AssetName }
+    if (-not $asset) { throw "Asset '$AssetName' not found in release $($release.tag_name)" }
+
+    $dlHeaders = @{ Accept = 'application/octet-stream' }
+    if ($Token) { $dlHeaders['Authorization'] = "token $Token" }
+    Invoke-WebRequest $asset.url -OutFile $OutFile -Headers $dlHeaders -UseBasicParsing -ErrorAction Stop
+}
+
+function Download-Asset {
+    param($Repo, $AssetName, $OutFile, $Version)
+    try {
+        Get-ReleaseAsset -Repo $Repo -AssetName $AssetName -OutFile $OutFile -Version $Version
+        return $true
+    } catch {
+        return $false
+    }
+}
 
 Write-Host "Checking for updates..."
 
 try {
-    Invoke-WebRequest "$baseNet/manifest.json"   -OutFile "$tempDir\net.manifest.json"   -UseBasicParsing -ErrorAction Stop
-    Invoke-WebRequest "$baseCobol/manifest.json" -OutFile "$tempDir\cobol.manifest.json" -UseBasicParsing -ErrorAction Stop
+    Get-ReleaseAsset -Repo $netRepo   -AssetName 'manifest.json' -OutFile "$tempDir\net.manifest.json"
+    Get-ReleaseAsset -Repo $cobolRepo -AssetName 'manifest.json' -OutFile "$tempDir\cobol.manifest.json"
 } catch {
-    Write-Host "ERROR: Could not reach GitHub releases. Check your connection."
+    Write-Host "ERROR: Could not reach GitHub releases. $_"
     exit 1
 }
 
@@ -44,13 +71,12 @@ foreach ($prop in $newNet.net.files.PSObject.Properties) {
         Write-Host "  $name  $fromStr -> $newVer  [downloading]"
         $downloaded = $false
         foreach ($ext in @('dll', 'exe')) {
-            try {
-                $dest = Join-Path $installDir "$name.$ext"
-                Invoke-WebRequest "$baseNet/$name.$ext" -OutFile $dest -UseBasicParsing -ErrorAction Stop
+            $dest = Join-Path $InstallDir "$name.$ext"
+            if (Download-Asset -Repo $netRepo -AssetName "$name.$ext" -OutFile $dest -Version $newVer) {
                 $downloaded = $true
                 $updated++
                 break
-            } catch {}
+            }
         }
         if (-not $downloaded) { Write-Warning "  Could not download $name" }
     } else {
@@ -68,11 +94,16 @@ foreach ($prop in $newCobol.cobol.files.PSObject.Properties) {
     if ($newVer -ne $localVer) {
         $fromStr = if ($localVer) { $localVer } else { 'not installed' }
         Write-Host "  $name  $fromStr -> $newVer  [downloading]"
-        try {
-            $dest = Join-Path $installDir "$name.dll"
-            Invoke-WebRequest "$baseCobol/$name.dll" -OutFile $dest -UseBasicParsing -ErrorAction Stop
-            $updated++
-        } catch { Write-Warning "  Could not download $name.dll" }
+        $downloaded = $false
+        foreach ($ext in @('dll', 'exe')) {
+            $dest = Join-Path $InstallDir "$name.$ext"
+            if (Download-Asset -Repo $cobolRepo -AssetName "$name.$ext" -OutFile $dest -Version $newVer) {
+                $downloaded = $true
+                $updated++
+                break
+            }
+        }
+        if (-not $downloaded) { Write-Warning "  Could not download $name" }
     } else {
         Write-Host "  $name  $newVer  [ok]"
     }
