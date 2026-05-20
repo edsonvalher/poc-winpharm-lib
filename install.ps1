@@ -1,6 +1,5 @@
 param(
-    [string]$InstallDir = 'C:\Winpharm',
-    [string]$Token      = $env:GH_TOKEN
+    [string]$InstallDir = 'C:\Winpharm'
 )
 
 $scriptDir  = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -30,7 +29,7 @@ function Register-Ocx {
             if ($result.ExitCode -eq 0) {
                 Write-Host "  $file registered."
             } else {
-                Write-Warning "  Failed to register $file (exit code $($result.ExitCode)). Run as administrator."
+                Write-Warning "  Failed to register $file (exit code $($result.ExitCode))."
             }
         } else {
             Write-Warning "  $file not found in ocx/."
@@ -51,7 +50,7 @@ New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
 
 if ((Test-OcxRegistered) -and (Test-Path $markerFile)) {
     Write-Host "Winpharm already installed. Running update..."
-    & "$scriptDir\update.ps1" -InstallDir $InstallDir -Token $Token
+    & "$scriptDir\update.ps1" -InstallDir $InstallDir
 } else {
     Write-Host "New installation detected."
     Register-Ocx
@@ -59,7 +58,7 @@ if ((Test-OcxRegistered) -and (Test-Path $markerFile)) {
     Copy-LibDlls
     Write-Host ""
     Write-Host "Downloading all components..."
-    & "$scriptDir\update.ps1" -InstallDir $InstallDir -Token $Token
+    & "$scriptDir\update.ps1" -InstallDir $InstallDir
     Set-Content $markerFile (Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
     Write-Host ""
     Write-Host "Installation complete."
