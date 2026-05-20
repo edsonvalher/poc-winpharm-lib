@@ -1,5 +1,6 @@
 param(
-    [string]$InstallDir = 'C:\Winpharm'
+    [string]$InstallDir = 'C:\Winpharm',
+    [string]$Token      = $env:GH_TOKEN
 )
 
 $netRepo   = 'edsonvalher/poc-winpharm-net'
@@ -8,33 +9,43 @@ $tempDir   = Join-Path $env:TEMP 'winpharm_update'
 
 New-Item -ItemType Directory -Force -Path $tempDir | Out-Null
 
-function Download-File {
-    param($Url, $OutFile)
+function Get-ReleaseAsset {
+    param($Repo, $AssetName, $OutFile, $Version)
+    $apiHeaders = @{ Accept = 'application/vnd.github.v3+json' }
+    if ($Token) { $apiHeaders['Authorization'] = "token $Token" }
+
+    $releaseUrl = if ($Version) {
+        "https://api.github.com/repos/$Repo/releases/tags/v$Version"
+    } else {
+        "https://api.github.com/repos/$Repo/releases/latest"
+    }
+
+    $release = Invoke-RestMethod $releaseUrl -Headers $apiHeaders
+    $asset   = $release.assets | Where-Object { $_.name -eq $AssetName }
+    if (-not $asset) { throw "Asset '$AssetName' not found in release $($release.tag_name)" }
+
+    $dlHeaders = @{ Accept = 'application/octet-stream' }
+    if ($Token) { $dlHeaders['Authorization'] = "token $Token" }
+    Invoke-WebRequest $asset.url -OutFile $OutFile -Headers $dlHeaders -UseBasicParsing -ErrorAction Stop
+}
+
+function Download-Asset {
+    param($Repo, $AssetName, $OutFile, $Version)
     try {
-        Invoke-WebRequest $Url -OutFile $OutFile -UseBasicParsing -ErrorAction Stop
+        Get-ReleaseAsset -Repo $Repo -AssetName $AssetName -OutFile $OutFile -Version $Version
         return $true
     } catch {
         return $false
     }
 }
 
-function Get-AssetUrl {
-    param($Repo, $Version, $AssetName)
-    return "https://github.com/$Repo/releases/download/v$Version/$AssetName"
-}
-
-function Get-ManifestUrl {
-    param($Repo)
-    return "https://github.com/$Repo/releases/latest/download/manifest.json"
-}
-
 Write-Host "Checking for updates..."
 
-$netManifestOk   = Download-File -Url (Get-ManifestUrl $netRepo)   -OutFile "$tempDir\net.manifest.json"
-$cobolManifestOk = Download-File -Url (Get-ManifestUrl $cobolRepo) -OutFile "$tempDir\cobol.manifest.json"
-
-if (-not $netManifestOk -or -not $cobolManifestOk) {
-    Write-Host "ERROR: Could not reach GitHub releases. Check your internet connection."
+try {
+    Get-ReleaseAsset -Repo $netRepo   -AssetName 'manifest.json' -OutFile "$tempDir\net.manifest.json"
+    Get-ReleaseAsset -Repo $cobolRepo -AssetName 'manifest.json' -OutFile "$tempDir\cobol.manifest.json"
+} catch {
+    Write-Host "ERROR: Could not reach GitHub releases. $_"
     exit 1
 }
 
@@ -60,9 +71,8 @@ foreach ($prop in $newNet.net.files.PSObject.Properties) {
         Write-Host "  $name  $fromStr -> $newVer  [downloading]"
         $downloaded = $false
         foreach ($ext in @('dll', 'exe')) {
-            $url  = Get-AssetUrl -Repo $netRepo -Version $newVer -AssetName "$name.$ext"
             $dest = Join-Path $InstallDir "$name.$ext"
-            if (Download-File -Url $url -OutFile $dest) {
+            if (Download-Asset -Repo $netRepo -AssetName "$name.$ext" -OutFile $dest -Version $newVer) {
                 $downloaded = $true
                 $updated++
                 break
@@ -86,9 +96,8 @@ foreach ($prop in $newCobol.cobol.files.PSObject.Properties) {
         Write-Host "  $name  $fromStr -> $newVer  [downloading]"
         $downloaded = $false
         foreach ($ext in @('dll', 'exe')) {
-            $url  = Get-AssetUrl -Repo $cobolRepo -Version $newVer -AssetName "$name.$ext"
             $dest = Join-Path $InstallDir "$name.$ext"
-            if (Download-File -Url $url -OutFile $dest) {
+            if (Download-Asset -Repo $cobolRepo -AssetName "$name.$ext" -OutFile $dest -Version $newVer) {
                 $downloaded = $true
                 $updated++
                 break

@@ -1,5 +1,6 @@
 param(
-    [string]$InstallDir = 'C:\Winpharm'
+    [string]$InstallDir = 'C:\Winpharm',
+    [string]$Token      = $env:GH_TOKEN
 )
 
 $scriptDir  = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -50,7 +51,7 @@ New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
 
 if ((Test-OcxRegistered) -and (Test-Path $markerFile)) {
     Write-Host "Winpharm already installed. Running update..."
-    & "$scriptDir\update.ps1" -InstallDir $InstallDir
+    & "$scriptDir\update.ps1" -InstallDir $InstallDir -Token $Token
 } else {
     Write-Host "New installation detected."
     Register-Ocx
@@ -58,7 +59,7 @@ if ((Test-OcxRegistered) -and (Test-Path $markerFile)) {
     Copy-LibDlls
     Write-Host ""
     Write-Host "Downloading all components..."
-    & "$scriptDir\update.ps1" -InstallDir $InstallDir
+    & "$scriptDir\update.ps1" -InstallDir $InstallDir -Token $Token
     Set-Content $markerFile (Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
     Write-Host ""
     Write-Host "Installation complete."
