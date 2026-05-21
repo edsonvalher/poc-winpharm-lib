@@ -177,8 +177,8 @@ function Update-Components {
 
     Remove-Item $tempDir -Recurse -Force
 
-    $netVerLine   = if ($prevNet)   { "v$prevNet  ->  v$($newNet.net.version)" }   else { "v$($newNet.net.version)" }
-    $cobolVerLine = if ($prevCobol) { "v$prevCobol  ->  v$($newCobol.cobol.version)" } else { "v$($newCobol.cobol.version)" }
+    $netVerLine   = if ($prevNet)   { "v$prevNet  ->  v$($newNet.net.version)" }   else { "not installed  ->  v$($newNet.net.version)" }
+    $cobolVerLine = if ($prevCobol) { "v$prevCobol  ->  v$($newCobol.cobol.version)" } else { "not installed  ->  v$($newCobol.cobol.version)" }
 
     Write-Host ""
     Write-Host "----------------------------------------"
