@@ -119,3 +119,10 @@ if ($updated -gt 0) {
 }
 
 Remove-Item $tempDir -Recurse -Force
+
+Write-Host ""
+Write-Host "----------------------------------------"
+Write-Host " Installed versions"
+Write-Host "   net   v$($newNet.net.version)"
+Write-Host "   cobol v$($newCobol.cobol.version)"
+Write-Host "----------------------------------------"
