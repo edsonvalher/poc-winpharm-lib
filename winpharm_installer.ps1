@@ -107,7 +107,10 @@ function Update-Components {
     $localNet   = if (Test-Path $localNetPath)   { Get-Content $localNetPath   | ConvertFrom-Json } else { $null }
     $localCobol = if (Test-Path $localCobolPath) { Get-Content $localCobolPath | ConvertFrom-Json } else { $null }
 
-    $updated = 0
+    $updated  = 0
+    $changes  = [System.Collections.Generic.List[string]]::new()
+    $prevNet   = if ($localNet)   { $localNet.net.version }     else { $null }
+    $prevCobol = if ($localCobol) { $localCobol.cobol.version } else { $null }
 
     Write-Host ""
     Write-Host "net v$($newNet.net.version)"
@@ -125,8 +128,12 @@ function Update-Components {
                     $downloaded = $true; $updated++; break
                 }
             }
-            if ($downloaded) { Write-Host " installed" -ForegroundColor Green }
-            else              { Write-Host " failed"    -ForegroundColor Red   }
+            if ($downloaded) {
+                Write-Host " installed" -ForegroundColor Green
+                $changes.Add("   $name  $fromStr  ->  $newVer")
+            } else {
+                Write-Host " failed" -ForegroundColor Red
+            }
         } else {
             Write-Host "  $name  $newVer  [ok]"
         }
@@ -148,8 +155,12 @@ function Update-Components {
                     $downloaded = $true; $updated++; break
                 }
             }
-            if ($downloaded) { Write-Host " installed" -ForegroundColor Green }
-            else              { Write-Host " failed"    -ForegroundColor Red   }
+            if ($downloaded) {
+                Write-Host " installed" -ForegroundColor Green
+                $changes.Add("   $name  $fromStr  ->  $newVer")
+            } else {
+                Write-Host " failed" -ForegroundColor Red
+            }
         } else {
             Write-Host "  $name  $newVer  [ok]"
         }
@@ -166,11 +177,19 @@ function Update-Components {
 
     Remove-Item $tempDir -Recurse -Force
 
+    $netVerLine   = if ($prevNet)   { "v$prevNet  ->  v$($newNet.net.version)" }   else { "v$($newNet.net.version)" }
+    $cobolVerLine = if ($prevCobol) { "v$prevCobol  ->  v$($newCobol.cobol.version)" } else { "v$($newCobol.cobol.version)" }
+
     Write-Host ""
     Write-Host "----------------------------------------"
-    Write-Host " Installed versions"
-    Write-Host "   net   v$($newNet.net.version)"
-    Write-Host "   cobol v$($newCobol.cobol.version)"
+    if ($changes.Count -gt 0) {
+        Write-Host " Updated components"
+        foreach ($line in $changes) { Write-Host $line }
+        Write-Host ""
+    }
+    Write-Host " Versions"
+    Write-Host "   net    $netVerLine"
+    Write-Host "   cobol  $cobolVerLine"
     Write-Host "----------------------------------------"
 }
 
