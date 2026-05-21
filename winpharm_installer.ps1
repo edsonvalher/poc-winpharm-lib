@@ -176,9 +176,7 @@ function Update-Components {
 
 New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
 
-$alreadyInstalled = (Test-OcxRegistered) -and (Test-Path $markerFile)
-
-if ($alreadyInstalled) {
+if (Test-Path $markerFile) {
     Write-Host "Winpharm installation detected. Checking for updates..."
     Update-Components
 } else {
