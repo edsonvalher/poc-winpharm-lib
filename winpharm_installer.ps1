@@ -117,7 +117,7 @@ function Update-Components {
         $localVer = if ($localNet) { $localNet.net.files.$name } else { $null }
         if ($newVer -ne $localVer) {
             $fromStr = if ($localVer) { $localVer } else { 'not installed' }
-            Write-Host "  $name  $fromStr -> $newVer  [downloading]"
+            Write-Host "  $name  $fromStr -> $newVer  [downloading]..." -NoNewline
             $downloaded = $false
             foreach ($ext in @('dll', 'exe')) {
                 $dest = Join-Path $InstallDir "$name.$ext"
@@ -125,7 +125,8 @@ function Update-Components {
                     $downloaded = $true; $updated++; break
                 }
             }
-            if (-not $downloaded) { Write-Warning "  Could not download $name" }
+            if ($downloaded) { Write-Host " installed" -ForegroundColor Green }
+            else              { Write-Host " failed"    -ForegroundColor Red   }
         } else {
             Write-Host "  $name  $newVer  [ok]"
         }
@@ -139,7 +140,7 @@ function Update-Components {
         $localVer = if ($localCobol) { $localCobol.cobol.files.$name } else { $null }
         if ($newVer -ne $localVer) {
             $fromStr = if ($localVer) { $localVer } else { 'not installed' }
-            Write-Host "  $name  $fromStr -> $newVer  [downloading]"
+            Write-Host "  $name  $fromStr -> $newVer  [downloading]..." -NoNewline
             $downloaded = $false
             foreach ($ext in @('dll', 'exe')) {
                 $dest = Join-Path $InstallDir "$name.$ext"
@@ -147,7 +148,8 @@ function Update-Components {
                     $downloaded = $true; $updated++; break
                 }
             }
-            if (-not $downloaded) { Write-Warning "  Could not download $name" }
+            if ($downloaded) { Write-Host " installed" -ForegroundColor Green }
+            else              { Write-Host " failed"    -ForegroundColor Red   }
         } else {
             Write-Host "  $name  $newVer  [ok]"
         }
